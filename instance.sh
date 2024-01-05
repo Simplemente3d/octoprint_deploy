@@ -42,8 +42,8 @@ new_instance() {
         echo
         echo
         echo
-        echo "Using a template instance allows you to copy config settings"
-        echo "and gcode files from one instance to your new instance."
+        echo "Using a template instance copies configs and allows you"
+        echo "to share gcode files from one instance to your new instance."
         if prompt_confirm "Use an existing instance as a template?"; then
             PS3="${cyan}Select template instance: ${white}"
             get_instances true
@@ -57,19 +57,26 @@ new_instance() {
                 echo "Using $opt as template."
                 break
             done
-            PS3="${cyan}Select what components of the template to copy: ${white}"
-            options=("Config Only" "Config and Gcode")
+
+            PS3="${cyan}Select Gcode storage option: ${white}"
+            options=("Copy from template instance" "Share storage with template instance", "Keep Gcode storage separate")
             select opt in "${options[@]}"
             do
                 case $opt in
-                    "Config Only")
-                        COPY=1
+                    "Copy from template instance")
+                        GCODE_STORAGE=1
                         break
                     ;;
-                    "Config and Gcode")
-                        COPY=2
+                    "Share storage with template instance")
+                        GCODE_STORAGE=2
                         break
-                        ;;*) echo "invalid option $REPLY";;
+                    ;;
+                    "Keep Gcode storage separate")
+                        break
+                    ;;
+                    *)
+                        echo "invalid option $REPLY"
+                    ;;
                 esac
             done
             
@@ -152,19 +159,26 @@ new_instance() {
         
         if [ -n "$TEMPLATE" ]; then
             #There may be other combinations of things to include/exclude
-            if [ $COPY -eq 1 ]; then
+
+            if [ $GCODE_STORAGE -eq 1 ]; then
+                #Copy
+                sudo -u $user rsync -r \
+                --exclude 'timelapse' \
+                --exclude 'logs' \
+                $BFOLD/* $OCTOCONFIG/.$INSTANCE/
+            else
+                #Options 2 and 3 do not copy the uploads directory
                 sudo -u $user rsync -r \
                 --exclude 'timelapse' \
                 --exclude 'uploads' \
                 --exclude 'logs' \
                 $BFOLD/* $OCTOCONFIG/.$INSTANCE/
+
+                #Create Symlink
+                sudo -u $user ln -s \
+                $BFOLD/uploads $OCTOCONFIG/.$INSTANCE/uploads
             fi
-            if [ $COPY -eq 2 ]; then
-                sudo -u $user rsync -r \
-                --exclude 'timelapse' \
-                --exclude 'logs' \
-                $BFOLD/* $OCTOCONFIG/.$INSTANCE/
-            fi
+
             echo "${magenta}Copying template files....${white}"
             #cp -rp $BFOLD/* $OCTOCONFIG/.$INSTANCE
         fi
