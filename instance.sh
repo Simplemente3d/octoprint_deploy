@@ -59,7 +59,7 @@ new_instance() {
             done
 
             PS3="${cyan}Select Gcode storage option: ${white}"
-            options=("Copy from template instance" "Share storage with template instance", "Keep Gcode storage separate")
+            options=("Copy from template instance" "Share storage with template instance" "Keep Gcode storage separate")
             select opt in "${options[@]}"
             do
                 case $opt in
